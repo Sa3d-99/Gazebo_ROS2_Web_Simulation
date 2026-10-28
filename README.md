@@ -10,8 +10,8 @@ The Ubuntu version is the OS **inside the container**.
 
 | Container image | ROS 2 | Gazebo |
 |---|---|---|
-| `ubuntu:22.04` | Humble | Fortress |
-| `ubuntu:24.04` | Jazzy | Harmonic |
+| `ubuntu:22.04` | [Humble — start and stop commands](#humble-on-ubuntu-2204) | Fortress |
+| `ubuntu:24.04` | [Jazzy — start and stop commands](#jazzy-on-ubuntu-2404) | Harmonic |
 
 Only these combinations are accepted. If `ROS_DISTRO` is unset, the installer
 selects it automatically from Ubuntu. An incompatible OS or distro is rejected
@@ -22,74 +22,128 @@ An existing matching ROS image also works; installed packages are reused.
 
 ## Humble on Ubuntu 22.04
 
-Choose an Ubuntu **22.04** container and expose port **8080 as HTTP**. In a root
-terminal, install curl if needed, then start the project:
+Use image **`ubuntu:22.04`** with **ROS 2 Humble** and **Gazebo Fortress**.
+Expose **8080 as HTTP**.
+
+### First start — download and install
+
+Run in a root terminal inside the Ubuntu 22.04 container:
 
 ```bash
 apt-get update && apt-get install -y curl ca-certificates
 curl -fsSL https://raw.githubusercontent.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/main/bootstrap.sh | ROS_DISTRO=humble bash
 ```
 
-Restart after the repository has been downloaded:
+### Start or restart after installation
 
 ```bash
-cd /workspace/Gazebo_ROS2_Web_Simulation
-ROS_DISTRO=humble bash novnc.sh
+cd /workspace/Gazebo_ROS2_Web_Simulation && ROS_DISTRO=humble bash novnc.sh
+```
+
+### Stop Gazebo and the browser desktop
+
+```bash
+cd /workspace/Gazebo_ROS2_Web_Simulation && bash stop.sh
+```
+
+This leaves the pod running. To stop billing, stop or terminate the pod in RunPod.
+
+### RunPod Container Start Command
+
+Use image `ubuntu:22.04`, expose **8080 as HTTP**, and paste this command
+into the template's **Container Start Command** field:
+
+```bash
+bash -c "apt-get update && apt-get install -y curl ca-certificates && curl -fsSL https://raw.githubusercontent.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/main/bootstrap.sh | ROS_DISTRO=humble bash; sleep infinity"
+```
+
+### Stop or relaunch only Gazebo
+
+To keep the browser desktop open while stopping Gazebo:
+
+```bash
+cd /workspace/Gazebo_ROS2_Web_Simulation && bash gazebo.sh stop
+```
+
+To open Gazebo again on that existing desktop:
+
+```bash
+cd /workspace/Gazebo_ROS2_Web_Simulation && ROS_DISTRO=humble bash gazebo.sh launch
+```
+
+### Use ROS Humble from another terminal
+
+```bash
+source /opt/ros/humble/setup.bash
+ros2 topic list
 ```
 
 ## Jazzy on Ubuntu 24.04
 
-Choose an Ubuntu **24.04** container and expose port **8080 as HTTP**. In a root
-terminal:
+Use image **`ubuntu:24.04`** with **ROS 2 Jazzy** and **Gazebo Harmonic**.
+Expose **8080 as HTTP**.
+
+### First start — download and install
+
+Run in a root terminal inside the Ubuntu 24.04 container:
 
 ```bash
 apt-get update && apt-get install -y curl ca-certificates
 curl -fsSL https://raw.githubusercontent.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/main/bootstrap.sh | ROS_DISTRO=jazzy bash
 ```
 
-Restart after the repository has been downloaded:
+### Start or restart after installation
 
 ```bash
-cd /workspace/Gazebo_ROS2_Web_Simulation
-ROS_DISTRO=jazzy bash novnc.sh
+cd /workspace/Gazebo_ROS2_Web_Simulation && ROS_DISTRO=jazzy bash novnc.sh
 ```
 
-## RunPod template / automatic startup
-
-Create a template with either Ubuntu image from the table above. Set HTTP port
-**8080** and use this **Container Start Command** for either version:
+### Stop Gazebo and the browser desktop
 
 ```bash
-bash -c "apt-get update && apt-get install -y curl ca-certificates && curl -fsSL https://raw.githubusercontent.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/main/bootstrap.sh | bash; sleep infinity"
+cd /workspace/Gazebo_ROS2_Web_Simulation && bash stop.sh
 ```
 
-Ubuntu selects the ROS distro automatically. Gazebo is the default application;
-no simulator selection flag is needed. Full settings are in [TEMPLATE.md](TEMPLATE.md).
+This leaves the pod running. To stop billing, stop or terminate the pod in RunPod.
+
+### RunPod Container Start Command
+
+Use image `ubuntu:24.04`, expose **8080 as HTTP**, and paste this command
+into the template's **Container Start Command** field:
+
+```bash
+bash -c "apt-get update && apt-get install -y curl ca-certificates && curl -fsSL https://raw.githubusercontent.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/main/bootstrap.sh | ROS_DISTRO=jazzy bash; sleep infinity"
+```
+
+### Stop or relaunch only Gazebo
+
+To keep the browser desktop open while stopping Gazebo:
+
+```bash
+cd /workspace/Gazebo_ROS2_Web_Simulation && bash gazebo.sh stop
+```
+
+To open Gazebo again on that existing desktop:
+
+```bash
+cd /workspace/Gazebo_ROS2_Web_Simulation && ROS_DISTRO=jazzy bash gazebo.sh launch
+```
+
+### Use ROS Jazzy from another terminal
+
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 topic list
+```
+
+## Open the browser desktop
 
 Open **RunPod → Connect → HTTP Service → port 8080**. The script prints the URL
 and saves it to `/workspace/gazebo-novnc-logs/novnc_url.txt`. The first package
 installation can take several minutes. Gazebo opens its bundled `shapes.sdf`
 world. Processes run detached so SSH disconnects do not stop them.
 
-## Stop and restart
-
-```bash
-cd /workspace/Gazebo_ROS2_Web_Simulation
-
-# Stop Gazebo and the browser desktop; leave the pod running
-bash stop.sh
-
-# Start again; reuse installed packages
-bash novnc.sh
-
-# Stop only this project's Gazebo session, keeping the desktop open
-bash gazebo.sh stop
-
-# Relaunch Gazebo on the existing desktop
-bash gazebo.sh launch
-```
-
-To stop billing, stop or terminate the **pod** in the RunPod console.
+Full template settings are in [TEMPLATE.md](TEMPLATE.md).
 
 ## Options and other worlds
 
@@ -126,16 +180,7 @@ LIBGL_ALWAYS_SOFTWARE=1 bash novnc.sh
 RES=2560x1440 VNC_PASSWORD=secret bash novnc.sh
 ```
 
-## Use ROS from another terminal
-
-Source the matching ROS environment in an SSH terminal:
-
-```bash
-source /opt/ros/humble/setup.bash  # Ubuntu 22.04
-# OR:
-source /opt/ros/jazzy/setup.bash   # Ubuntu 24.04
-ros2 topic list
-```
+## Connect your robot's ROS topics
 
 The installer includes `ros_gz` integration packages. Configure `ros_gz_bridge`
 for your robot's topics; starting Gazebo does not bridge all topics automatically.
