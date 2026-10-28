@@ -177,5 +177,4 @@ which remains the separate Isaac Sim project. This repository runs Gazebo.
 
 ## License
 
-[MIT](LICENSE). The original desktop scripts retain their copyright notice in
-[LICENSE.upstream](LICENSE.upstream).
+[MIT](LICENSE).
