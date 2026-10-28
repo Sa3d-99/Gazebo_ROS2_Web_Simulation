@@ -42,23 +42,26 @@ gazebo_install() {
     fi
 
     gazebo_log "Installing ROS ${ROS_DISTRO} + Gazebo ${GAZEBO_RELEASE}..."
-    ${SUDO:-} apt-get update -qq
-    ${SUDO:-} env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-        ca-certificates curl python3 software-properties-common >/dev/null
-    ${SUDO:-} add-apt-repository -y universe >/dev/null
+    gazebo_log "Preparing repository tools..."
+    install_apt update
+    install_apt install -y ca-certificates curl python3 software-properties-common
+    gazebo_log "Enabling Ubuntu Universe..."
+    ${SUDO:-} add-apt-repository --yes --no-update universe
 
     # Use ROS's maintained repository/key package. Existing ROS images may already
     # have a working repository; leave that configuration in place when usable.
-    ${SUDO:-} apt-get update -qq
+    install_apt update
     if ! apt-cache show "ros-${ROS_DISTRO}-ros-gz" >/dev/null 2>&1; then
         local source_version tmp_dir
-        source_version="$(curl -fsSL --retry 3 \
+        gazebo_log "Looking up the ROS apt repository release..."
+        source_version="$(curl -fL --progress-bar --retry 3 --connect-timeout 30 \
             https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest \
             | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
         [[ "$source_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
             || { gazebo_error "Could not determine ros2-apt-source release."; return 1; }
         tmp_dir="$(mktemp -d)"
-        if ! curl -fsSL --retry 3 -o "$tmp_dir/ros2-apt-source.deb" \
+        gazebo_log "Downloading ros2-apt-source ${source_version} for ${GAZEBO_CODENAME}..."
+        if ! curl -fL --progress-bar --retry 3 --connect-timeout 30 -o "$tmp_dir/ros2-apt-source.deb" \
             "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${source_version}/ros2-apt-source_${source_version}.${GAZEBO_CODENAME}_all.deb"; then
             rm -rf "$tmp_dir"
             gazebo_error "Could not download ros2-apt-source."
@@ -69,10 +72,23 @@ gazebo_install() {
             return 1
         fi
         rm -rf "$tmp_dir"
+        install_apt update
     fi
-    ${SUDO:-} apt-get update -qq
-    ${SUDO:-} env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${packages[@]}"
+    gazebo_log "Downloading and installing ROS/Gazebo packages. This can take several minutes; let it finish."
+    install_apt install -y "${packages[@]}"
     gazebo_log "ROS ${ROS_DISTRO} + Gazebo ${GAZEBO_RELEASE} ready."
+}
+
+gazebo_verify_installation() {
+    local setup="${1:-/opt/ros/${ROS_DISTRO}/setup.bash}"
+    gazebo_log "Verifying ROS and Gazebo integration packages..."
+    [[ -f "$setup" ]] || { gazebo_error "Installation incomplete: $setup is missing."; return 1; }
+    bash -e -c '
+        source "$1"
+        command -v ros2
+        ros2 pkg prefix ros_gz_sim
+        ros2 pkg prefix ros_gz_bridge
+    ' verify-ros "$setup"
 }
 
 gazebo_launch() {

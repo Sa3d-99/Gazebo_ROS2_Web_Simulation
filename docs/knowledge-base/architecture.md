@@ -12,7 +12,7 @@ bootstrap.sh → novnc.sh → install.sh → gazebo.sh installation helpers
 
 `bootstrap.sh` downloads this repository's GitHub archive into `/workspace/Gazebo_ROS2_Web_Simulation`, then executes `novnc.sh`. It replaces its destination checkout on rerun, so keep unique worlds and work outside that directory.
 
-`install.sh` validates the Ubuntu/ROS pairing before desktop installation, installs apt desktop dependencies and `websockify`, and invokes the Gazebo package helper. Root or passwordless sudo and a writable system are required.
+`install.sh` validates the Ubuntu/ROS pairing before desktop installation, installs apt desktop dependencies and `websockify`, and invokes the Gazebo package helper. `install-utils.sh` centralizes visible apt output, installer serialization, and a private temporary package archive directory. Root or passwordless sudo and a writable system are required. Output is streamed to the terminal and persisted in `LOG_DIR/install.log`; ROS setup and both integration packages are verified before success is reported.
 
 `novnc.sh` validates compatibility, installs missing dependencies, cleans up its previous session, and launches Xvfb, Fluxbox, x11vnc, websockify, and the ROS Gazebo launcher. Long-lived processes use `setsid`. The Gazebo session PID is recorded so shutdown targets its process group without a broad simulator-name match.
 

@@ -13,8 +13,14 @@ Create separate templates for the Ubuntu/ROS versions you want to offer.
 Use a container running as root. The same start command works for both images:
 
 ```bash
-bash -c "apt-get update && apt-get install -y curl ca-certificates && curl -fsSL https://raw.githubusercontent.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/main/bootstrap.sh | bash; sleep infinity"
+bash -c "apt-get update && apt-get install -y curl ca-certificates && curl -fL --progress-bar https://raw.githubusercontent.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/main/bootstrap.sh | bash; sleep infinity"
 ```
+
+Use the `Gazebo_ROS2_Web_Simulation` URL shown above for this project. An old
+`runpod_noVNC_isaac_sim` URL starts the separate Isaac project.
+
+Downloads and package installation print in the terminal and are saved to
+`/workspace/gazebo-novnc-logs/install.log`. Allow installation to finish.
 
 The Ubuntu version selects Humble/Fortress or Jazzy/Harmonic automatically.
 Optionally set `VNC_PASSWORD`, `RES`, or `GAZEBO_ARGS` in the template's

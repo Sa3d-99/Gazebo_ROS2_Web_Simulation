@@ -21,9 +21,10 @@ trap 'rm -rf "$TMP"' EXIT
 
 log "Downloading ${REPO}@${BRANCH} (no git required)..."
 if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$TARBALL" -o "$TMP/repo.tar.gz" || die "download failed: $TARBALL"
+    curl -fL --progress-bar --retry 3 --connect-timeout 30 "$TARBALL" -o "$TMP/repo.tar.gz" \
+        || die "download failed: $TARBALL"
 else
-    wget -qO "$TMP/repo.tar.gz" "$TARBALL" || die "download failed: $TARBALL"
+    wget --progress=bar:force -O "$TMP/repo.tar.gz" "$TARBALL" || die "download failed: $TARBALL"
 fi
 
 tar -xzf "$TMP/repo.tar.gz" -C "$TMP" || die "could not extract the archive."
@@ -35,6 +36,8 @@ rm -rf "$DEST"
 mv "$SRC" "$DEST"
 chmod +x "$DEST"/*.sh 2>/dev/null || true
 log "Installed to $DEST"
+rm -rf "$TMP"
+trap - EXIT
 
 # --- run the method -------------------------------------------------------------
 cd "$DEST"

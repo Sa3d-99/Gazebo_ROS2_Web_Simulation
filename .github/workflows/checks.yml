@@ -11,6 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check Bash syntax
-        run: bash -n bootstrap.sh install.sh novnc.sh gazebo.sh stop.sh
+        run: bash -n bootstrap.sh install.sh install-utils.sh novnc.sh gazebo.sh stop.sh
       - name: Check compatibility and shutdown isolation
         run: python3 -m unittest discover -s tests -v

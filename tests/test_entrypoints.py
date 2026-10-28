@@ -44,7 +44,8 @@ class EntrypointTests(unittest.TestCase):
                 #!/usr/bin/env python3
                 import os, pathlib, shutil, sys
                 args = sys.argv[1:]
-                pathlib.Path(os.environ['URL_MARKER']).write_text(args[1])
+                pathlib.Path(os.environ['URL_MARKER']).write_text(next(a for a in args if a.startswith('https://')))
+                print('Download progress: 50%', file=sys.stderr)
                 shutil.copyfile(os.environ['TEST_ARCHIVE'], args[args.index('-o') + 1])
             ''')
             env = {**self.environment(directory), "ROS_DISTRO": "jazzy",
@@ -52,30 +53,36 @@ class EntrypointTests(unittest.TestCase):
                    "TEST_ARCHIVE": str(archive),
                    "URL_MARKER": str(directory / "url"),
                    "ENTRY_MARKER": str(directory / "entry")}
-            subprocess.run(["bash", str(ROOT / "bootstrap.sh")], env=env,
-                           capture_output=True, text=True, timeout=10, check=True)
+            result = subprocess.run(["bash", str(ROOT / "bootstrap.sh")], env=env,
+                                    capture_output=True, text=True, timeout=10, check=True)
             self.assertEqual((directory / "url").read_text(),
                              "https://codeload.github.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/tar.gz/refs/heads/main")
             self.assertEqual((directory / "entry").read_text(), "jazzy")
             self.assertTrue((directory / "installed/novnc.sh").is_file())
+            self.assertIn("Download progress: 50%", result.stderr)
+            self.assertFalse(list(directory.glob("tmp.*")))
 
     def test_install_always_selects_and_installs_gazebo_without_mode_flag(self):
         with tempfile.TemporaryDirectory() as temp:
             directory = Path(temp)
             (directory / "bin").mkdir()
             shutil.copy2(ROOT / "install.sh", directory / "install.sh")
+            shutil.copy2(ROOT / "install-utils.sh", directory / "install-utils.sh")
             (directory / "requirements.txt").write_text("# No pip downloads in this fixture.\n")
             (directory / "gazebo.sh").write_text('''
-gazebo_select_platform() { echo validate >> "$CALL_MARKER"; }
+gazebo_select_platform() { export ROS_DISTRO=humble; GAZEBO_RELEASE=Fortress; echo validate >> "$CALL_MARKER"; }
 gazebo_install() { echo gazebo_install >> "$CALL_MARKER"; }
+gazebo_verify_installation() { echo verify >> "$CALL_MARKER"; }
 ''')
             for command in ("git", "python3", "Xvfb", "x11vnc", "fluxbox", "websockify", "xdpyinfo", "apt-get"):
                 executable(directory / "bin" / command, "#!/bin/sh\nexit 0\n")
             executable(directory / "bin/id", "#!/bin/sh\necho 0\n")
-            env = {**self.environment(directory), "CALL_MARKER": str(directory / "calls")}
+            env = {**self.environment(directory), "CALL_MARKER": str(directory / "calls"),
+                   "TMPDIR": str(directory), "LOG_DIR": str(directory / "logs")}
             subprocess.run(["bash", str(directory / "install.sh")], env=env,
                            capture_output=True, text=True, timeout=10, check=True)
-            self.assertEqual((directory / "calls").read_text().splitlines(), ["validate", "gazebo_install"])
+            self.assertEqual((directory / "calls").read_text().splitlines(), ["validate", "gazebo_install", "verify"])
+            self.assertIn("Installation complete", (directory / "logs/install.log").read_text())
 
     def test_novnc_defaults_to_gazebo_and_passes_display_and_world(self):
         with tempfile.TemporaryDirectory() as temp:

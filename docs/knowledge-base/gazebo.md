@@ -13,6 +13,8 @@ An unset `ROS_DISTRO` is filled from Ubuntu. A conflicting distro or another OS/
 
 Installation uses `ros-<distro>-ros-base`, `ros-<distro>-ros-gz`, and Mesa/GL, Qt/XCB, and D-Bus dependencies. Installed packages and a usable existing ROS apt source are reused. Otherwise the maintained `ros2-apt-source` package configures the ROS repository. No Gazebo Classic or separate OSRF repository is added.
 
+`install-utils.sh` serializes project installers with `flock`, gives each installation its own temporary apt archive/partial directory, retains apt/dpkg locks, and enables visible output, three download retries, and a 300-second package-lock timeout. Its exit trap cleans up the temporary archive directory. Installation output also goes to `LOG_DIR/install.log`. Before reporting completion, `gazebo_verify_installation` checks ROS setup, the `ros2` command, `ros_gz_sim`, and `ros_gz_bridge`. See the [investigation note](installer-progress.md) for the observed failure and limits of the fix.
+
 Launch sources `/opt/ros/<distro>/setup.bash`, selects Qt XCB, and runs `ros2 launch ros_gz_sim gz_sim.launch.py` on the shared display. `GAZEBO_ARGS` defaults to `-r shapes.sdf` and can select another world. The recorded process group and ROS launch shutdown option keep server and GUI lifecycle together.
 
 The project installs ROS integration packages. Robot topic bridging still requires a world-specific `ros_gz_bridge` configuration. `LIBGL_ALWAYS_SOFTWARE=1` is a documented graphics fallback.
