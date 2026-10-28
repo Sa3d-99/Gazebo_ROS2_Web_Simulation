@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Stop this project's Gazebo session and noVNC desktop; leave the pod running.
+# Usage: bash stop.sh. Restart with bash novnc.sh.
+set -uo pipefail   # no -e: we want to keep going even if something is already dead
+
+DISPLAY_NUM="${DISPLAY_NUM:-:1}"
+WEB_PORT="${WEB_PORT:-8080}"
+VNC_PORT="${VNC_PORT:-5900}"
+LOG_DIR="${LOG_DIR:-/workspace/gazebo-novnc-logs}"
+
+log() { echo "[stop] $*"; }
+
+stopped_any=0
+
+# --- Gazebo (only the detached session novnc.sh recorded) -----------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$LOG_DIR/gazebo-gui.pid" && -f "$SCRIPT_DIR/gazebo.sh" ]]; then
+    LOG_DIR="$LOG_DIR" bash "$SCRIPT_DIR/gazebo.sh" stop
+    stopped_any=1
+fi
+
+# --- desktop stack ---------------------------------------------------------------
+for spec in \
+    "websockify --web=/usr/share/novnc ${WEB_PORT}|noVNC web server" \
+    "x11vnc -display ${DISPLAY_NUM}|VNC server" \
+    "fluxbox|window manager" \
+    "Xvfb ${DISPLAY_NUM}|virtual display"
+do
+    pat="${spec%%|*}"
+    name="${spec##*|}"
+    if pgrep -f "$pat" >/dev/null 2>&1; then
+        log "Stopping ${name}..."
+        pkill -f "$pat" 2>/dev/null
+        stopped_any=1
+    fi
+done
+
+sleep 2
+
+# --- anything stubborn gets SIGKILL ----------------------------------------------
+for pat in \
+    "websockify --web=/usr/share/novnc ${WEB_PORT}" \
+    "x11vnc -display ${DISPLAY_NUM}" \
+    "Xvfb ${DISPLAY_NUM}"
+do
+    pgrep -f "$pat" >/dev/null 2>&1 && pkill -9 -f "$pat" 2>/dev/null
+done
+
+# --- clean up the display's lock files --------------------------------------------
+rm -f "/tmp/.X${DISPLAY_NUM#:}-lock"
+rm -rf "/tmp/.X11-unix/X${DISPLAY_NUM#:}" 2>/dev/null
+
+if [[ $stopped_any -eq 1 ]]; then
+    log "Desktop stopped."
+else
+    log "Nothing was running."
+fi
+log "Start the desktop again with:  bash novnc.sh"

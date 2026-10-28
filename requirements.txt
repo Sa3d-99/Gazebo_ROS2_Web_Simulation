@@ -1,0 +1,21 @@
+# Python dependencies for the noVNC method.
+#
+# websockify is the WebSocket-to-TCP bridge that lets the browser's noVNC client
+# talk to the VNC server. install.sh installs it from apt first; this pin is the
+# fallback/upgrade path for images where the apt package is missing or too old.
+websockify>=0.11.0
+
+# ---------------------------------------------------------------------------
+# The installer additionally installs ros-<distro>-ros-base, ros-<distro>-ros-gz,
+# Mesa/GL libraries, libxcb-cursor0 and dbus-x11 via apt (see gazebo.sh).
+# ROS Humble/Fortress requires Ubuntu 22.04; Jazzy/Harmonic requires 24.04.
+# NOT pip packages — these are installed by install.sh via apt, because they are
+# system binaries and pip cannot provide them:
+#   git         clone/update the repo on the pod
+#   python3     runtime for websockify
+#   Xvfb        virtual X display Gazebo renders into
+#   x11vnc      VNC server exposing that display
+#   fluxbox     minimal window manager
+#   novnc       browser-side VNC client (web assets in /usr/share/novnc)
+#   x11-utils   xdpyinfo, used to verify the display started
+# ---------------------------------------------------------------------------
