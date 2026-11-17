@@ -11,3 +11,5 @@ dist/
 .env.*
 *.pem
 *.key
+# Generated Docker desktop captures are linked from authored validation notes.
+docs/knowledge-base/evidence/docker-*.png

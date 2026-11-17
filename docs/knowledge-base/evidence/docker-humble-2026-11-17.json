@@ -1,0 +1,58 @@
+{
+  "image": "gazebo-ros2-web:humble",
+  "started_at": "2026-11-17T16:02:29.629693+00:00",
+  "checks": {
+    "healthy_desktop": true,
+    "platform": "[gazebo] Ubuntu jammy: ROS humble + Gazebo Fortress",
+    "installed_versions": [
+      "ros-humble-ros-base=0.10.0-1jammy.20261110.134139",
+      "ros-humble-ros-gz=0.244.27-1jammy.20261110.143018",
+      "ros-humble-ros-gz-sim=0.244.27-1jammy.20261110.095230"
+    ],
+    "published_http_200": true,
+    "websocket_upgrade": true,
+    "ros_integration_packages": [
+      "/opt/ros/humble",
+      "/opt/ros/humble"
+    ],
+    "simulation_topics": [
+      "/clock",
+      "/gazebo/resource_paths",
+      "/gui/camera/pose",
+      "/stats",
+      "/world/shapes/clock",
+      "/world/shapes/dynamic_pose/info",
+      "/world/shapes/pose/info",
+      "/world/shapes/scene/deletion",
+      "/world/shapes/scene/info",
+      "/world/shapes/state",
+      "/world/shapes/stats"
+    ],
+    "simulation_publishes_stats": "sim_time {\n  sec: 4\n  nsec: 302000000\n}\nreal_time {\n  sec: 6\n  nsec: 614668894\n}\niterations: 4302\nreal_time_factor: 0.9004\n\nsim_time {\n  sec: 4\n  nsec: 392000000\n}\nreal_time {\n  sec: 6\n  nsec: 715530600\n}\niterations: 4392\nreal_time_factor: 0.8193",
+    "gazebo_gui_window": true,
+    "rendered_desktop": {
+      "width": 1280,
+      "height": 720,
+      "colors": 9497,
+      "desktop": "a1d1921fef66:1",
+      "file": "docs/knowledge-base/evidence/docker-humble-2026-11-17.png"
+    },
+    "graceful_stop": {
+      "seconds": 3.71,
+      "exit_code": 0
+    },
+    "restart": true,
+    "service_failure_exits_nonzero": true,
+    "world_volume_survives_new_container": true,
+    "offline_start_no_install": true,
+    "vnc_requires_password": "[2]",
+    "offline_graceful_stop": true,
+    "custom_command_ros_environment": "/opt/ros/humble",
+    "mismatched_ros_rejected": true
+  },
+  "image_id": "sha256:8511526ecbddb4d815ef216dd5f8ac6841711db51721989e71243971d70f344e",
+  "architecture": "amd64",
+  "size_bytes": 4856273492,
+  "passed": true,
+  "finished_at": "2026-11-17T16:03:35.671474+00:00"
+}

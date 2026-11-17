@@ -1,0 +1,15 @@
+# Only explicitly selected application inputs enter the build context.
+**
+!Dockerfile
+!.dockerignore
+!install.sh
+!install-utils.sh
+!gazebo.sh
+!novnc.sh
+!stop.sh
+!requirements.txt
+!LICENSE
+!docker/
+docker/**
+!docker/entrypoint.sh
+!docker/healthcheck.sh

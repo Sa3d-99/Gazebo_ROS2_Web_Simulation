@@ -41,7 +41,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=gazebo.sh
 source "$SCRIPT_DIR/gazebo.sh"
 gazebo_select_platform
-bash "$SCRIPT_DIR/install.sh"
+if [[ "${GAZEBO_PREINSTALLED:-0}" == 1 ]]; then
+    # Docker installs at build time; startup must also work without internet.
+    gazebo_verify_installation
+else
+    bash "$SCRIPT_DIR/install.sh"
+fi
 
 # --- 2. stop our previous Gazebo session and desktop -----------------------------
 log "Cleaning up any previous noVNC stack..."

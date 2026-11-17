@@ -21,3 +21,22 @@ Defaults are display `:1`, resolution `1920x1080`, VNC `5900`, HTTP `8080`, and 
 `bash gazebo.sh stop` stops the recorded simulator session and keeps the desktop available. `bash stop.sh` also stops the desktop. Stopping pod billing remains a RunPod console action. This repository does not launch or kill Isaac processes.
 
 See [compatibility decisions](gazebo.md), [provenance](migration.md), and [validation](validation.md).
+
+## Docker deployment
+
+`Dockerfile` builds either supported Ubuntu edition and installs dependencies
+with the shared installer. Scripts live at `/opt/gazebo-web`; workspace volumes
+cannot hide them. `GAZEBO_PREINSTALLED=1` makes `novnc.sh` verify ROS without
+running apt or pip during startup. The ordinary bootstrap path still installs.
+
+`tini → docker/entrypoint.sh → novnc.sh` starts the desktop and monitors
+`docker/healthcheck.sh` (X display, HTTP, VNC handshake, ROS launch PID).
+Three consecutive failures cause an exit with status 1. TERM/INT and startup
+failure trigger `stop.sh`; custom container commands instead receive the sourced
+ROS environment. Software rendering is the CPU default. Compose binds HTTP to
+localhost, gives shared memory 1 GiB and persists worlds/logs in named volumes.
+Its default image is the published Ubuntu 24.04 Docker Hub edition. The package
+workflow builds both Ubuntu editions, runs the full container smoke test and
+publishes separate GHCR packages using `GITHUB_TOKEN`; package names and commands
+are documented in the README and Docker guide.
+See [Docker operations](../docker.md) for publishing and EC2 over an SSH tunnel.

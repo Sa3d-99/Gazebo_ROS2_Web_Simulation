@@ -1,10 +1,144 @@
 # Gazebo ROS 2 Web Simulation
 
-Run **Gazebo with ROS 2 in your browser** on RunPod using noVNC. The project
-installs the desktop, ROS and the matching Gazebo release, then launches Gazebo
-automatically. One HTTP port: **8080**.
+Run **Gazebo with ROS 2 in your browser** using Docker on your computer, AWS EC2
+or RunPod. The prebuilt images include ROS, Gazebo and the noVNC desktop, so
+starting them does not install or download packages. Browser port: **8080**.
 
-## Choose your Ubuntu / ROS version
+## Choose a prebuilt image
+
+The Ubuntu version below is the OS **inside the container**. Both editions
+target **Linux amd64** and use CPU software rendering by default.
+
+| Ubuntu | ROS 2 | Gazebo | Docker Hub image |
+|---|---|---|---|
+| 22.04 | Humble | Fortress | `sa3d99/gazebo-ros2-web:ubuntu22.04` |
+| 24.04 | Jazzy | Harmonic | `sa3d99/gazebo-ros2-web:ubuntu24.04` |
+
+Two separate GitHub Packages are built and tested by the
+[Publish container packages workflow](.github/workflows/publish-packages.yml):
+
+| Ubuntu | GitHub container package |
+|---|---|
+| 22.04 | `ghcr.io/sa3d-99/gazebo-ros2-web-ubuntu22.04:latest` |
+| 24.04 | `ghcr.io/sa3d-99/gazebo-ros2-web-ubuntu24.04:latest` |
+
+Each GitHub package also has a ROS distro tag (`humble` or `jazzy`) and a
+`sha-<full-commit>` tag. Substitute either registry's image in the run commands
+below. GitHub Packages start private by default; see the
+[package access instructions](docs/docker.md#github-container-packages) if a
+GHCR pull asks for authentication. Docker Hub is the default for these commands.
+
+## Ubuntu 22.04 / Humble / Fortress — Docker commands
+
+Run these commands on a machine with Docker installed:
+
+```bash
+docker pull sa3d99/gazebo-ros2-web:ubuntu22.04
+docker run -d --name gazebo-humble --restart unless-stopped \
+  --shm-size=1g --stop-timeout=30 \
+  -p 127.0.0.1:8080:8080 \
+  -v gazebo-humble-worlds:/workspace/worlds \
+  -v gazebo-humble-logs:/workspace/gazebo-novnc-logs \
+  sa3d99/gazebo-ros2-web:ubuntu22.04
+```
+
+Open <http://localhost:8080/vnc.html?autoconnect=1&resize=remote>.
+
+```bash
+# View startup output and health
+docker logs -f gazebo-humble
+docker inspect --format '{{.State.Health.Status}}' gazebo-humble
+
+# Stop; start again later without creating a new container
+docker stop --time 30 gazebo-humble
+docker start gazebo-humble
+
+# Use ROS from another terminal while the container is running
+docker exec -it gazebo-humble bash
+source /opt/ros/humble/setup.bash
+ros2 topic list
+```
+
+## Ubuntu 24.04 / Jazzy / Harmonic — Docker commands
+
+```bash
+docker pull sa3d99/gazebo-ros2-web:ubuntu24.04
+docker run -d --name gazebo-jazzy --restart unless-stopped \
+  --shm-size=1g --stop-timeout=30 \
+  -p 127.0.0.1:8080:8080 \
+  -v gazebo-jazzy-worlds:/workspace/worlds \
+  -v gazebo-jazzy-logs:/workspace/gazebo-novnc-logs \
+  sa3d99/gazebo-ros2-web:ubuntu24.04
+```
+
+Open <http://localhost:8080/vnc.html?autoconnect=1&resize=remote>.
+
+```bash
+docker logs -f gazebo-jazzy
+docker inspect --format '{{.State.Health.Status}}' gazebo-jazzy
+docker stop --time 30 gazebo-jazzy
+docker start gazebo-jazzy
+docker exec -it gazebo-jazzy bash
+source /opt/ros/jazzy/setup.bash
+ros2 topic list
+```
+
+Run one edition at a time on host port 8080, or map the other edition to another
+host port. `docker run` creates a container once; use `docker start` after stopping
+it. Worlds and logs live in the named volumes and survive container removal.
+Press `Ctrl+C` to leave `docker logs -f`; the container keeps running.
+The earlier `sa3d99/gazebo-ros2-web:tagname` tag remains the tested Jazzy edition.
+
+## Docker Compose
+
+From this repository, start the prebuilt Ubuntu 24.04 edition:
+
+```bash
+docker compose pull
+docker compose up -d --no-build
+docker compose logs -f
+docker compose down
+```
+
+For Ubuntu 22.04, set the edition on both commands:
+
+```bash
+GAZEBO_IMAGE=sa3d99/gazebo-ros2-web:ubuntu22.04 UBUNTU_VERSION=22.04 docker compose pull
+GAZEBO_IMAGE=sa3d99/gazebo-ros2-web:ubuntu22.04 UBUNTU_VERSION=22.04 docker compose up -d --no-build
+```
+
+## RunPod and AWS with the prebuilt images
+
+On RunPod, select either Docker Hub image from the table, expose **8080 as HTTP**,
+and keep the image's default entrypoint/start command. Open **Connect → HTTP
+Service → port 8080**. The bootstrap commands below are for plain Ubuntu images.
+
+On AWS EC2, use an x86_64 instance with Docker installed and run the same Docker
+commands. Keep the service bound to localhost and connect through an SSH tunnel:
+
+```bash
+ssh -i /path/to/aws-key.pem -L 8080:127.0.0.1:8080 ubuntu@EC2_PUBLIC_IP
+```
+
+Then open the same localhost browser URL on your computer. Full build, registry,
+custom-world, persistence and AWS instructions are in [the Docker guide](docs/docker.md).
+
+## Build either edition yourself
+
+```bash
+git clone https://github.com/Sa3d-99/Gazebo_ROS2_Web_Simulation.git
+cd Gazebo_ROS2_Web_Simulation
+docker build --build-arg UBUNTU_VERSION=22.04 -t gazebo-ros2-web:humble .
+docker build --build-arg UBUNTU_VERSION=24.04 -t gazebo-ros2-web:jazzy .
+```
+
+Both editions passed 19 local container checks, including rendered Gazebo,
+WebSocket access, advancing simulation, offline startup, restart and graceful
+shutdown. See [validation evidence](docs/knowledge-base/validation.md).
+
+## Install directly inside a plain Ubuntu container
+
+### Choose your Ubuntu / ROS version
 
 The Ubuntu version is the OS **inside the container**.
 

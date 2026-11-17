@@ -1,0 +1,24 @@
+services:
+  gazebo:
+    image: ${GAZEBO_IMAGE:-sa3d99/gazebo-ros2-web:ubuntu24.04}
+    build:
+      context: .
+      args:
+        UBUNTU_VERSION: ${UBUNTU_VERSION:-24.04}
+    ports:
+      - "127.0.0.1:8080:8080"
+    shm_size: 1gb
+    stop_grace_period: 30s
+    restart: unless-stopped
+    environment:
+      RES: ${RES:-1920x1080}
+      VNC_PASSWORD: ${VNC_PASSWORD:-}
+      GAZEBO_ARGS: ${GAZEBO_ARGS:--r shapes.sdf}
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    volumes:
+      - worlds:/workspace/worlds
+      - logs:/workspace/gazebo-novnc-logs
+
+volumes:
+  worlds:
+  logs:

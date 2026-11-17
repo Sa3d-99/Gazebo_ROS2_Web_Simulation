@@ -1,5 +1,53 @@
 # Validation evidence
 
+## Standalone Docker validation — 2026-11-17
+
+Both images were built from this standalone checkout on Linux amd64, using the
+real shared installer and fresh Ubuntu base images. These results validate the
+Docker image path and the installer changes, independently of the older combined
+project evidence below.
+
+| Local image | Platform | Image size (uncompressed) | Saved results | Desktop capture |
+|---|---|---|---|---|
+| `gazebo-ros2-web:humble` | Ubuntu 22.04 / Humble / Fortress | 4.52 GiB | [19 checks](evidence/docker-humble-2026-11-17.json) | [Rendered shapes world](evidence/docker-humble-2026-11-17.png) |
+| `gazebo-ros2-web:jazzy` | Ubuntu 24.04 / Jazzy / Harmonic | 5.30 GiB | [19 checks](evidence/docker-jazzy-2026-11-17.json) | [Rendered shapes world](evidence/docker-jazzy-2026-11-17.png) |
+
+`python3 tests/docker_smoke.py <image> --output <results.json>` checks image
+health, supported platform and package versions, published HTTP 200, WebSocket
+upgrade, ROS integration packages, Gazebo topics, increasing simulation
+iterations, a Gazebo GUI window, a nonblank RFB desktop capture, graceful stop,
+restart, nonzero exit after service failure, world persistence across containers,
+startup with `--network none` and no installer, VNC password negotiation, offline
+shutdown, ROS environment for custom commands, and mismatched-distro rejection.
+All 19 checks passed for each edition. The captured desktops were also visually
+inspected: both show the primitive shapes and ground grid. Software rendering
+was enabled, with a 1280×720 virtual display and 1 GiB shared memory.
+
+The first Jazzy test needed its diagnostic shell to source ROS before invoking
+the vendored `gz` CLI; the test was corrected. No image change was needed for
+that issue. The saved successful results include image IDs, package versions,
+simulation samples and timestamps.
+
+All 14 existing unittest methods passed in 20.774 seconds. Bash syntax, Compose
+configuration, Dockerfile build checks, documentation shell examples and local
+links passed. The new manual Docker CI workflow is defined for both editions;
+no hosted workflow run is claimed. Only the test's disposable containers and
+world volume are removed; the built images remain available locally.
+All eight application inputs inside each final image were also compared against
+the current source with SHA-256; every file matched. The confirmed Jazzy runner
+and the Humble runner both returned exit code 0.
+
+Docker Hub upload, AWS deployment, RunPod proxy access, ARM/Graviton and hardware
+GPU rendering were not tested. The integration world is small; these results are
+not a performance or capacity benchmark. Build downloads use current apt/pip
+packages, so preserve a published digest to deploy the same image later.
+
+The project graph and Obsidian vault were established locally and updated for
+Docker deployment. Generated captures are linked here and excluded from graph
+extraction. Authored notes remain in `docs/knowledge-base/`.
+
+## Earlier validation and provenance
+
 Recorded 2026-10-28. Separate inherited runtime evidence from checks of this standalone repository.
 
 The [saved integration results](evidence/gazebo-integration-2026-10-28.json) come from the combined implementation in `runpod_noVNC_isaac_sim` at `b924bd0`. Clean Docker tests passed for Ubuntu 22.04 / Humble / Fortress and Ubuntu 24.04 / Jazzy / Harmonic: package installation, noVNC HTTP 200, visibly rendered shapes world, simulator topics, mismatched-distro rejection without desktop shutdown, simulator-only stop, idempotent restart, and full desktop stop. Both used official `ros2-apt-source` 1.3.0.
