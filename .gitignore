@@ -3,3 +3,6 @@ graphify-out/
 .graphify/
 __pycache__/
 *.py[cod]
+# Disposable local Docker integration captures; retain source and authored notes.
+docs/knowledge-base/evidence/docker-*.json
+docs/knowledge-base/evidence/docker-*.png

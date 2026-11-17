@@ -1,50 +1,58 @@
 # Validation evidence
 
-## Standalone Docker validation — 2026-11-17
+## Standalone Docker and GitHub Packages — 2026-11-17
 
-Both images were built from this standalone checkout on Linux amd64, using the
-real shared installer and fresh Ubuntu base images. These results validate the
-Docker image path and the installer changes, independently of the older combined
-project evidence below.
+Both supported editions were built and tested on Linux amd64: Ubuntu 22.04 /
+Humble / Fortress and Ubuntu 24.04 / Jazzy / Harmonic.
 
-| Local image | Platform | Image size (uncompressed) | Saved results | Desktop capture |
-|---|---|---|---|---|
-| `gazebo-ros2-web:humble` | Ubuntu 22.04 / Humble / Fortress | 4.52 GiB | [19 checks](evidence/docker-humble-2026-11-17.json) | [Rendered shapes world](evidence/docker-humble-2026-11-17.png) |
-| `gazebo-ros2-web:jazzy` | Ubuntu 24.04 / Jazzy / Harmonic | 5.30 GiB | [19 checks](evidence/docker-jazzy-2026-11-17.json) | [Rendered shapes world](evidence/docker-jazzy-2026-11-17.png) |
+Each local edition passed 19 real container checks, including HTTP and WebSocket
+access, ROS integration packages, advancing simulation statistics, a rendered
+Gazebo window, offline startup, persistent worlds, VNC authentication, restart,
+service failure detection and graceful shutdown. Both desktop captures were
+visually inspected and showed the shapes world. Software rendering used a
+1280×720 display with 1 GiB shared memory. All eight application inputs in each
+local image matched the source by SHA-256.
 
-`python3 tests/docker_smoke.py <image> --output <results.json>` checks image
-health, supported platform and package versions, published HTTP 200, WebSocket
-upgrade, ROS integration packages, Gazebo topics, increasing simulation
-iterations, a Gazebo GUI window, a nonblank RFB desktop capture, graceful stop,
-restart, nonzero exit after service failure, world persistence across containers,
-startup with `--network none` and no installer, VNC password negotiation, offline
-shutdown, ROS environment for custom commands, and mismatched-distro rejection.
-All 19 checks passed for each edition. The captured desktops were also visually
-inspected: both show the primitive shapes and ground grid. Software rendering
-was enabled, with a 1280×720 virtual display and 1 GiB shared memory.
+The [GitHub package workflow](https://github.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/actions/runs/44130085812)
+for source commit `8648791a055f482e8245ac8399bc05e8c3e629d4` also completed
+successfully. It independently built both editions, passed all 19 container
+checks for each, published two public packages and saved registry receipts.
+Anonymous registry reads verified that each published image's configuration
+digest matches the image that passed its hosted tests.
 
-The first Jazzy test needed its diagnostic shell to source ROS before invoking
-the vendored `gz` CLI; the test was corrected. No image change was needed for
-that issue. The saved successful results include image IDs, package versions,
-simulation samples and timestamps.
+| Hosted edition | Tested image configuration digest |
+|---|---|
+| Humble / Ubuntu 22.04 | `sha256:169052c85f8b40b8acfa30c027c199b94f5d1224609055d6b56696bb5f0eb174` |
+| Jazzy / Ubuntu 24.04 | `sha256:6532f54a9e5fab44e467883ed9bd887f8c0eb2cb5169e045ed8dc5fe8c0f7b9f` |
 
-All 14 existing unittest methods passed in 20.774 seconds. Bash syntax, Compose
-configuration, Dockerfile build checks, documentation shell examples and local
-links passed. The new manual Docker CI workflow is defined for both editions;
-no hosted workflow run is claimed. Only the test's disposable containers and
-world volume are removed; the built images remain available locally.
-All eight application inputs inside each final image were also compared against
-the current source with SHA-256; every file matched. The confirmed Jazzy runner
-and the Humble runner both returned exit code 0.
+The [script checks](https://github.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/actions/runs/44130085806)
+also passed on both Ubuntu runner versions. All 14 local unittest methods passed
+in 20.765 seconds. Bash syntax, workflow YAML and shell syntax, Compose settings,
+documentation commands and local links passed.
 
-Docker Hub upload, AWS deployment, RunPod proxy access, ARM/Graviton and hardware
-GPU rendering were not tested. The integration world is small; these results are
-not a performance or capacity benchmark. Build downloads use current apt/pip
-packages, so preserve a published digest to deploy the same image later.
+See the [publication record](docker-hub.md) for Docker Hub and GHCR references
+and verified registry digests. Local images, screenshots and generated result
+files are disposable and are removed after publication at the user's request;
+test source and this authored record remain. Workflow evidence is available
+through the linked successful run.
 
-The project graph and Obsidian vault were established locally and updated for
-Docker deployment. Generated captures are linked here and excluded from graph
-extraction. Authored notes remain in `docs/knowledge-base/`.
+AWS deployment, RunPod proxy access, ARM/Graviton and hardware GPU rendering
+remain untested. The small bundled world is a functional validation baseline,
+not a performance benchmark. Builds fetch current packages, so use a registry
+digest when an exact deployment is required.
+
+## Storage cleanup — 2026-11-17
+
+After registry publication was verified, removed the two local project images
+(five tags) and all 26 identified build-cache records from this session. The
+filesystem gained approximately 17.65 GiB. Other preexisting image IDs, cache
+record IDs and container IDs were checked and preserved. The test's disposable
+containers and volumes had already been removed by the smoke runner.
+
+Generated local test JSON/PNG files are removed from the source tree and ignored
+for future runs. Temporary logs, Python bytecode and generated Graphify/Obsidian
+exports are disposable; authored notes, source, test scripts and published
+registry images remain. The graph can be rebuilt from source on the next task.
 
 ## Earlier validation and provenance
 

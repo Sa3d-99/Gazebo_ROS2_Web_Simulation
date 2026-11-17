@@ -12,7 +12,7 @@ docker pull sa3d99/gazebo-ros2-web:ubuntu22.04  # Humble / Fortress
 docker pull sa3d99/gazebo-ros2-web:ubuntu24.04  # Jazzy / Harmonic
 ```
 
-See the [README's edition-specific commands](../README.md#choose-a-prebuilt-image)
+See the [README's edition-specific commands](../README.md#choose-your-version)
 for start, stop, restart, logs and ROS terminals. The earlier `:tagname` tag is a
 Jazzy alias. The [publication record](knowledge-base/docker-hub.md) saves verified
 image digests.
@@ -35,20 +35,17 @@ Run workflow**. Each package has `latest`, its ROS distro tag, and
 `sha-<full-commit>` for that source revision. GitHub builds are independent of
 the local Docker Hub builds; their digests can differ.
 
-GitHub creates container packages as private initially. The owner can make each
-package public through its package page → **Package settings → Change
-visibility**. For private GHCR pulls, authenticate with your GitHub username and
-a personal access token (classic) with `read:packages`:
+Both published packages are **public** and can be pulled without signing in:
 
 ```bash
-docker login ghcr.io -u Sa3d-99
 docker pull ghcr.io/sa3d-99/gazebo-ros2-web-ubuntu22.04:latest
 docker pull ghcr.io/sa3d-99/gazebo-ros2-web-ubuntu24.04:latest
 ```
 
-Enter the token at Docker's password prompt. Public GHCR packages can be pulled
-without authentication. See GitHub's [container registry documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-and [package visibility instructions](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility).
+Their manifests were checked anonymously after the successful hosted tests.
+See [the publication record](knowledge-base/docker-hub.md) for pinned digests.
+For publishing and access settings, see GitHub's
+[container registry documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 
 ## Build and run locally
 
