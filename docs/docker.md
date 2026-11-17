@@ -145,6 +145,9 @@ These commands follow Docker's [tag and push workflow](https://docs.docker.com/d
 
 ## Run later on AWS EC2
 
+For the full console walkthrough, Docker installation and stop/start steps,
+follow [AWS EC2 setup in the README](../README.md#aws-ec2-setup-step-by-step).
+
 The locally validated images target **Linux amd64**. Use an x86_64 EC2 instance
 with Docker Engine installed; select an Ubuntu host if you want the familiar
 tooling. Container Ubuntu/ROS versions are independent of the host version.

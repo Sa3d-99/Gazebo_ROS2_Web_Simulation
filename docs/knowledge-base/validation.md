@@ -1,5 +1,19 @@
 # Validation evidence
 
+## Cloud setup documentation — 2026-11-17
+
+The README now places both editions' start/stop/restart commands first and gives
+numbered EC2 and RunPod setup steps. EC2 covers an x86 Ubuntu server, SSH key and
+network settings, Docker's official apt repository, group-login refresh, image
+startup, browser tunneling and instance stop/resume. RunPod covers template
+fields, preserved image entrypoint with CMD `desktop`, deployment, HTTP 8080,
+Pod lifecycle controls and `/workspace` persistence.
+
+Provider instructions were checked against the linked official AWS, Docker and
+RunPod documentation. Documentation Bash snippets and local heading links were
+validated. This documentation change performs no new cloud deployment or image
+download; the runtime validation and untested targets below remain unchanged.
+
 ## Standalone Docker and GitHub Packages — 2026-11-17
 
 Both supported editions were built and tested on Linux amd64: Ubuntu 22.04 /

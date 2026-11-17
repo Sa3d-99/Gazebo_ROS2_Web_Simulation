@@ -1,6 +1,8 @@
 # RunPod template — Gazebo ROS 2 Web Simulation
 
 Create separate templates for the Ubuntu/ROS versions you want to offer.
+Follow the [step-by-step RunPod setup](README.md#runpod-setup-step-by-step)
+for template creation, deployment, browser access and stop/start controls.
 
 | Setting | Humble template | Jazzy template |
 |---|---|---|
