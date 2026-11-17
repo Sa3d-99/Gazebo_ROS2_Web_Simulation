@@ -4,6 +4,7 @@ Run **Gazebo and ROS 2 in your browser** on your computer, AWS EC2 or RunPod.
 The published Docker images already include ROS, Gazebo and the browser desktop.
 
 **Go to:** [Start / stop commands](#start-and-stop-commands) ·
+[Inside the RunPod terminal](#terminal-commands-inside-runpod) ·
 [First start](#first-start-create-your-container) ·
 [AWS setup](#aws-ec2-setup-step-by-step) ·
 [RunPod setup](#runpod-setup-step-by-step)
@@ -38,6 +39,44 @@ its menu. The image starts Gazebo automatically whenever the Pod starts.
 **To stop cloud compute charges:** stop the **EC2 instance** or **RunPod Pod**
 in its cloud console. `docker stop` only stops the simulation. Persistent
 storage can still be charged while the server is stopped.
+
+## Terminal commands inside RunPod
+
+In a terminal such as `root@...:/opt/gazebo-web#`, you are already inside the
+container. Use the project's shell scripts there. The `docker` commands above
+belong on your own computer or the EC2 host.
+
+**Current published-image limitation:** the default Docker entrypoint monitors
+noVNC and Gazebo. Stopping either service makes the monitor exit the container;
+the provider may then stop or restart it. Starting the scripts again while the
+monitor is active can also race with its checks. Stopping and restarting only
+the desktop while keeping the same Pod terminal alive is **not supported by
+the current Docker wrapper**.
+
+These are the project's manual script commands, for a session running without
+that automatic desktop monitor:
+
+**Start noVNC and Gazebo:**
+
+```bash
+cd /opt/gazebo-web
+bash novnc.sh
+```
+
+**Stop noVNC and Gazebo:**
+
+```bash
+cd /opt/gazebo-web
+bash stop.sh
+```
+
+The prebuilt image normally starts both automatically. For its current default
+mode, use the RunPod Start/Stop controls above. The Docker wrapper would need a
+runtime change to support stopping the desktop from inside the Pod and leaving
+the Pod running; this README update does not change that behavior.
+
+The browser interface is **noVNC**. Its web page is named `vnc.html`, which is
+why that filename appears in the browser URLs below.
 
 ## First start: create your container
 
