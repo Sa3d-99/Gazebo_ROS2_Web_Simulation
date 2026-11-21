@@ -9,9 +9,9 @@ changes test both supported images; documentation-only changes skip the large
 builds. Pull requests cannot publish. Trusted builds stage passed images under
 commit tags; moving release tags wait for both editions and all checks.
 
-Local validation passed all 14 unit tests in 20.770 seconds, workflow linting
-with checksum-verified actionlint 1.7.12, 45 documentation Bash examples and 55
-local links. Isolated executions of the actual workflow shell blocks passed six
+Local validation passed all 18 unit tests in 20.911 seconds, workflow linting
+with checksum-verified actionlint 1.7.12, 45 documentation Bash examples and 57
+local links. Isolated executions of the actual workflow shell blocks passed ten
 release-planning scenarios, nine changed-path scenarios and nine final-gate
 success/failure scenarios. Registry metadata reads verified the digest formatter
 used by the publication job without downloading image layers.
@@ -19,7 +19,18 @@ used by the publication job without downloading image layers.
 The owner configured `DOCKERHUB_TOKEN`; its presence was checked through secret
 metadata without reading its value. CD is scoped to GHCR and Docker Hub image
 delivery, as requested. No cloud instance or Pod deployment is configured.
-Hosted execution is verified separately from these local checks.
+The [complete hosted run](https://github.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/actions/runs/44956368322)
+passed from source `71e557ec901e11b3d54c0373b4492dbc8c72cc0b`: both Ubuntu
+runner checks, both fresh image builds, all 19 runtime checks per edition,
+both registry publishers and the final CI result. The renderer checks captured
+1280×720 noVNC desktops and verified simulation statistics and GUI windows.
+
+Anonymous registry reads verified both Docker Hub Ubuntu tags and both GHCR
+`latest` tags without downloading image layers. Each edition has the same
+manifest and configuration digest in both registries, and its image revision
+matches the tested source commit. The manifests also match the digests recorded
+by the hosted staging and publication jobs. See the [publication record](docker-hub.md)
+for exact references. This establishes image delivery, not a cloud deployment.
 
 The first hosted run caught ShellCheck SC2129; release-output writes were grouped
 and checked again with ShellCheck enabled locally. A later fresh Jazzy build
