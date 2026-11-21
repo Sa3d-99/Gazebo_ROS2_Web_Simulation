@@ -7,7 +7,8 @@ The published Docker images already include ROS, Gazebo and the browser desktop.
 [Inside the RunPod terminal](#terminal-commands-inside-runpod) ·
 [First start](#first-start-create-your-container) ·
 [AWS setup](#aws-ec2-setup-step-by-step) ·
-[RunPod setup](#runpod-setup-step-by-step)
+[RunPod setup](#runpod-setup-step-by-step) ·
+[CI/CD](#cicd-pipeline)
 
 ## Choose your version
 
@@ -331,6 +332,22 @@ ros2 topic list
 On RunPod, open its web terminal and source `/opt/ros/humble/setup.bash` or
 `/opt/ros/jazzy/setup.bash` directly. The image includes `ros_gz_bridge` for
 configuring your robot's topic bridges.
+
+## CI/CD pipeline
+
+[CI / CD in GitHub Actions](https://github.com/Sa3d-99/Gazebo_ROS2_Web_Simulation/actions/workflows/ci-cd.yml)
+automatically checks pull requests and builds/tests both Ubuntu editions for
+container changes. Documentation-only edits run the faster checks. After a
+successful container change on `main`, it publishes tested GHCR images. Docker Hub
+publication is enabled by adding a repository secret named `DOCKERHUB_TOKEN`
+with a Read & Write Docker Hub access token; the username defaults to `sa3d99`.
+
+Both editions must pass before release tags update. Git tags such as `v1.0.0`
+publish versioned images. You can also run the workflow manually, with or
+without publishing. Test artifacts are kept for one day.
+
+See [the CI/CD setup guide](docs/ci-cd.md) for the exact steps, image tags and
+troubleshooting.
 
 ## More information
 

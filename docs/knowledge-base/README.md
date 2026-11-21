@@ -12,6 +12,7 @@ require a simulator-selection flag.
 - [Setup and commands](../../README.md)
 - [Docker images, Docker Hub publishing and AWS EC2](../docker.md)
 - [Published Docker Hub image and verified digest](docker-hub.md)
+- [CI/CD pipeline and registry setup](../ci-cd.md)
 
 Durable authored notes live here. Local Graphify data is in `graphify-out/graph.json`, the audit report in `graphify-out/GRAPH_REPORT.md`, and the interactive view in `graphify-out/graph.html`. Open `graphify-out/obsidian/` as the Obsidian vault; authored notes are incorporated under `project-knowledge/`.
 

@@ -1,0 +1,294 @@
+name: CI / CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v[0-9]*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish tested images (main branch only)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ci-cd-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Select pipeline scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      containers: ${{ steps.scope.outputs.containers }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+      - name: Decide whether container tests are needed
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          containers=true
+          if [[ "$EVENT_NAME" != workflow_dispatch && "$GITHUB_REF" != refs/tags/* \
+                && "$BASE_SHA" =~ ^[a-f0-9]{40}$ && "$BASE_SHA" != 0000000000000000000000000000000000000000 ]]; then
+            if git fetch --no-tags --depth=1 origin "$BASE_SHA" \
+                && git diff --no-renames --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-paths.txt"; then
+              containers=false
+              while IFS= read -r path; do
+                [[ -n "$path" ]] || continue
+                case "$path" in
+                  docs/*|README.md|TEMPLATE.md|AGENTS.md|LICENSE|.gitignore|.graphifyignore) ;;
+                  *) containers=true ;;
+                esac
+              done < "$RUNNER_TEMP/changed-paths.txt"
+            fi
+          fi
+          echo "containers=$containers" >> "$GITHUB_OUTPUT"
+
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check every Bash script
+        run: |
+          for script in ./*.sh docker/*.sh .github/scripts/*.sh; do
+            bash -n "$script"
+          done
+      - name: Lint workflows
+        run: bash .github/scripts/check-workflows.sh
+      - name: Check documentation commands and links
+        run: python3 .github/scripts/check-docs.py
+      - name: Run compatibility, installer and lifecycle unit tests
+        run: python3 -m unittest discover -s tests -v
+
+  validate-images:
+    name: Test Ubuntu ${{ matrix.ubuntu }} / ${{ matrix.ros }}
+    needs: [changes, checks]
+    if: >-
+      needs.changes.outputs.containers == 'true' &&
+      (github.event_name == 'pull_request' ||
+       (github.event_name == 'workflow_dispatch' &&
+        (github.ref != 'refs/heads/main' || !inputs.publish)))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ubuntu: '22.04'
+            ros: humble
+          - ubuntu: '24.04'
+            ros: jazzy
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/build-test
+        with:
+          ubuntu: ${{ matrix.ubuntu }}
+          ros: ${{ matrix.ros }}
+      - name: Remove runner test image
+        if: ${{ always() }}
+        env:
+          ROS_EDITION: ${{ matrix.ros }}
+        run: docker image rm "gazebo-ci:$ROS_EDITION" || true
+
+  stage-images:
+    name: Build Ubuntu ${{ matrix.ubuntu }} / ${{ matrix.ros }}
+    needs: [changes, checks]
+    if: >-
+      needs.changes.outputs.containers == 'true' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' &&
+        github.ref == 'refs/heads/main' && inputs.publish))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ubuntu: '22.04'
+            ros: humble
+          - ubuntu: '24.04'
+            ros: jazzy
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/build-test
+        with:
+          ubuntu: ${{ matrix.ubuntu }}
+          ros: ${{ matrix.ros }}
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stage the tested image with its commit tag
+        env:
+          ROS_EDITION: ${{ matrix.ros }}
+          UBUNTU_VERSION: ${{ matrix.ubuntu }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="ghcr.io/$owner/gazebo-ros2-web-ubuntu$UBUNTU_VERSION"
+          docker tag "gazebo-ci:$ROS_EDITION" "$image:sha-$GITHUB_SHA"
+          docker push "$image:sha-$GITHUB_SHA"
+      - name: Remove runner test image
+        if: ${{ always() }}
+        env:
+          ROS_EDITION: ${{ matrix.ros }}
+        run: docker image rm "gazebo-ci:$ROS_EDITION" || true
+
+  publish:
+    name: Publish Ubuntu ${{ matrix.ubuntu }}
+    needs: [checks, stage-images]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ubuntu: '22.04'
+            ros: humble
+          - ubuntu: '24.04'
+            ros: jazzy
+    env:
+      UBUNTU_VERSION: ${{ matrix.ubuntu }}
+      ROS_EDITION: ${{ matrix.ros }}
+      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || 'sa3d99' }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve tested digest and release tags
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="ghcr.io/$owner/gazebo-ros2-web-ubuntu$UBUNTU_VERSION"
+          digest="$(docker buildx imagetools inspect "$image:sha-$GITHUB_SHA" --format '{{.Manifest.Digest}}')"
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          moving=false
+          version=""
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            head="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/git/ref/heads/main" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["object"]["sha"])')"
+            [[ "$head" != "$GITHUB_SHA" ]] || moving=true
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            version="$GITHUB_REF_NAME"
+            [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][a-zA-Z0-9][a-zA-Z0-9.-]*)?$ ]]
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "moving=$moving" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Promote the same tested digest on GHCR
+        env:
+          IMAGE: ${{ steps.release.outputs.image }}
+          DIGEST: ${{ steps.release.outputs.digest }}
+          MOVING: ${{ steps.release.outputs.moving }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          tags=(--tag "$IMAGE:sha-$GITHUB_SHA")
+          if [[ "$MOVING" == true ]]; then
+            tags+=(--tag "$IMAGE:latest" --tag "$IMAGE:$ROS_EDITION")
+          fi
+          if [[ -n "$VERSION" ]]; then tags+=(--tag "$IMAGE:$VERSION"); fi
+          docker buildx imagetools create --prefer-index=false "${tags[@]}" "$IMAGE@$DIGEST"
+          docker buildx imagetools inspect "$IMAGE@$DIGEST"
+      - name: Sign in to Docker Hub when configured
+        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
+      - name: Copy the tested image to Docker Hub
+        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        env:
+          IMAGE: ${{ steps.release.outputs.image }}
+          DIGEST: ${{ steps.release.outputs.digest }}
+          MOVING: ${{ steps.release.outputs.moving }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          source="$IMAGE@$DIGEST"
+          target="$DOCKERHUB_USERNAME/gazebo-ros2-web"
+          docker pull "$source"
+          tags=("ubuntu$UBUNTU_VERSION-sha-$GITHUB_SHA")
+          if [[ "$MOVING" == true ]]; then tags+=("ubuntu$UBUNTU_VERSION" "$ROS_EDITION"); fi
+          if [[ -n "$VERSION" ]]; then tags+=("ubuntu$UBUNTU_VERSION-$VERSION"); fi
+          for tag in "${tags[@]}"; do
+            docker tag "$source" "$target:$tag"
+            docker push "$target:$tag"
+          done
+      - name: Write release summary
+        env:
+          IMAGE: ${{ steps.release.outputs.image }}
+          DIGEST: ${{ steps.release.outputs.digest }}
+        run: |
+          {
+            echo "### Ubuntu $UBUNTU_VERSION / ROS $ROS_EDITION"
+            echo "Tested GHCR image: \`$IMAGE@$DIGEST\`"
+            echo "Commit tag: \`$IMAGE:sha-$GITHUB_SHA\`"
+            if [[ -n "$DOCKERHUB_TOKEN" ]]; then
+              echo "Docker Hub: \`$DOCKERHUB_USERNAME/gazebo-ros2-web\`"
+            else
+              echo 'Docker Hub skipped: add the DOCKERHUB_TOKEN repository secret to enable it.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  result:
+    name: CI result
+    if: ${{ always() }}
+    needs: [changes, checks, validate-images, stage-images, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require the expected checks, image tests and publication to succeed
+        env:
+          CHECKS: ${{ needs.checks.result }}
+          CHANGES: ${{ needs.changes.result }}
+          CONTAINERS: ${{ needs.changes.outputs.containers }}
+          VALIDATE: ${{ needs.validate-images.result }}
+          STAGE: ${{ needs.stage-images.result }}
+          PUBLISH: ${{ needs.publish.result }}
+        run: |
+          [[ "$CHECKS" == success ]]
+          [[ "$CHANGES" == success ]]
+          if [[ "$CONTAINERS" == true ]]; then
+            [[ "$VALIDATE" == success || "$STAGE" == success ]]
+            if [[ "$STAGE" == success ]]; then [[ "$PUBLISH" == success ]]; fi
+          else
+            [[ "$CONTAINERS" == false ]]
+            [[ "$VALIDATE" == skipped && "$STAGE" == skipped && "$PUBLISH" == skipped ]]
+          fi

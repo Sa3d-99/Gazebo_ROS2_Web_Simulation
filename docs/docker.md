@@ -20,20 +20,21 @@ image digests.
 ## GitHub container packages
 
 The repository publishes two separate packages through
-[Publish container packages](../.github/workflows/publish-packages.yml):
+[CI / CD](../.github/workflows/ci-cd.yml):
 
 | Edition | Package |
 |---|---|
 | Ubuntu 22.04 / Humble / Fortress | `ghcr.io/sa3d-99/gazebo-ros2-web-ubuntu22.04:latest` |
 | Ubuntu 24.04 / Jazzy / Harmonic | `ghcr.io/sa3d-99/gazebo-ros2-web-ubuntu24.04:latest` |
 
-The workflow builds and runs all 19 container checks before pushing an edition.
-It authenticates using the repository's `GITHUB_TOKEN` with `packages: write`;
-no Docker Hub secret is needed. It runs when container sources change on `main`
-and can also be started manually in **Actions → Publish container packages →
-Run workflow**. Each package has `latest`, its ROS distro tag, and
-`sha-<full-commit>` for that source revision. GitHub builds are independent of
-the local Docker Hub builds; their digests can differ.
+The workflow tests pull requests and runs all 19 container checks for each
+edition. Both editions and the script checks must pass before release tags
+update. GHCR uses the repository's `GITHUB_TOKEN` with `packages: write`.
+Docker Hub publishing is enabled with `DOCKERHUB_TOKEN`; see the
+[CI/CD setup guide](ci-cd.md). Run it manually through **Actions → CI / CD →
+Run workflow**. Each GHCR package has `latest`, its ROS distro tag, and
+`sha-<full-commit>`. Versioned release tags are supported too. Pin a registry
+digest for an exact deployment.
 
 Both published packages are **public** and can be pulled without signing in:
 

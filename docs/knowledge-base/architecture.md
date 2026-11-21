@@ -36,7 +36,14 @@ failure trigger `stop.sh`; custom container commands instead receive the sourced
 ROS environment. Software rendering is the CPU default. Compose binds HTTP to
 localhost, gives shared memory 1 GiB and persists worlds/logs in named volumes.
 Its default image is the published Ubuntu 24.04 Docker Hub edition. The package
-workflow builds both Ubuntu editions, runs the full container smoke test and
-publishes separate GHCR packages using `GITHUB_TOKEN`; package names and commands
-are documented in the README and Docker guide.
+pipeline in `.github/workflows/ci-cd.yml` runs script/unit/documentation checks
+before either container build. Read-only pull-request jobs test both editions;
+trusted main/tag/manual publishing jobs stage their tested images under commit
+tags on GHCR. Publication waits for both image jobs, then promotes the same
+registry digests without rebuilding. Main moving tags are guarded against older
+reruns, and release tags preserve those moving tags. GHCR uses `GITHUB_TOKEN`;
+Docker Hub publishing requires the `DOCKERHUB_TOKEN` repository secret. A local
+composite action shares the build/test steps. Small evidence artifacts expire
+after one day; image tarballs and build caches are not uploaded.
+See [CI/CD operations](../ci-cd.md) for triggers, tags and setup.
 See [Docker operations](../docker.md) for publishing and EC2 over an SSH tunnel.

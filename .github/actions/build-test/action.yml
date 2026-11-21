@@ -1,0 +1,43 @@
+name: Build and test Gazebo edition
+description: Build one supported Linux amd64 edition and exercise the real desktop and simulation.
+inputs:
+  ubuntu:
+    description: Ubuntu version (22.04 or 24.04)
+    required: true
+  ros:
+    description: Matching ROS distro (humble or jazzy)
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Build image
+      shell: bash
+      env:
+        UBUNTU_VERSION: ${{ inputs.ubuntu }}
+        ROS_EDITION: ${{ inputs.ros }}
+      run: |
+        case "$UBUNTU_VERSION/$ROS_EDITION" in
+          22.04/humble|24.04/jazzy) ;;
+          *) echo 'Unsupported Ubuntu / ROS pairing' >&2; exit 1 ;;
+        esac
+        docker build --platform linux/amd64 \
+          --build-arg "UBUNTU_VERSION=$UBUNTU_VERSION" \
+          --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+          --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+          --label "org.opencontainers.image.version=ubuntu$UBUNTU_VERSION" \
+          -t "gazebo-ci:$ROS_EDITION" .
+    - name: Test noVNC, ROS, simulation and lifecycle
+      shell: bash
+      env:
+        ROS_EDITION: ${{ inputs.ros }}
+      run: |
+        python3 tests/docker_smoke.py "gazebo-ci:$ROS_EDITION" \
+          --output "$RUNNER_TEMP/gazebo-results/$ROS_EDITION.json"
+    - name: Save test results for one day
+      if: ${{ always() }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: smoke-${{ github.job }}-${{ inputs.ros }}
+        path: ${{ runner.temp }}/gazebo-results/
+        retention-days: 1
+        if-no-files-found: ignore
