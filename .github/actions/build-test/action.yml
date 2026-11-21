@@ -37,7 +37,7 @@ runs:
       if: ${{ always() }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: smoke-${{ github.job }}-${{ inputs.ros }}
+        name: smoke-${{ github.job }}-${{ inputs.ros }}-attempt-${{ github.run_attempt }}
         path: ${{ runner.temp }}/gazebo-results/
         retention-days: 1
         if-no-files-found: ignore

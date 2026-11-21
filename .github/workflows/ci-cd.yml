@@ -200,11 +200,31 @@ jobs:
           moving=false
           version=""
           if [[ "$GITHUB_REF" == refs/heads/main ]]; then
-            head="$(curl --fail --silent --show-error \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              "https://api.github.com/repos/$GITHUB_REPOSITORY/git/ref/heads/main" \
-              | python3 -c 'import json,sys; print(json.load(sys.stdin)["object"]["sha"])')"
-            [[ "$head" != "$GITHUB_SHA" ]] || moving=true
+            error_file="$RUNNER_TEMP/latest-image-error.txt"
+            if ! published="$(docker buildx imagetools inspect "$image:latest" \
+                --format '{{index .Image.Config.Labels "org.opencontainers.image.revision"}}' 2> "$error_file")"; then
+              if grep -Eiq 'manifest unknown|not found' "$error_file"; then
+                published=""
+              else
+                cat "$error_file" >&2
+                exit 1
+              fi
+            fi
+            rm -f "$error_file"
+            if [[ -z "$published" || "$published" == '<no value>' ]]; then
+              moving=true
+            else
+              [[ "$published" =~ ^[a-f0-9]{40}$ ]]
+              comparison="$(curl --fail --silent --show-error \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                "https://api.github.com/repos/$GITHUB_REPOSITORY/compare/$published...$GITHUB_SHA" \
+                | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')"
+              case "$comparison" in
+                ahead|identical) moving=true ;;
+                behind|diverged) ;;
+                *) echo 'Unexpected commit comparison response' >&2; exit 1 ;;
+              esac
+            fi
           elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             version="$GITHUB_REF_NAME"
             [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][a-zA-Z0-9][a-zA-Z0-9.-]*)?$ ]]
