@@ -21,6 +21,14 @@ metadata without reading its value. CD is scoped to GHCR and Docker Hub image
 delivery, as requested. No cloud instance or Pod deployment is configured.
 Hosted execution is verified separately from these local checks.
 
+The first hosted run caught ShellCheck SC2129; release-output writes were grouped
+and checked again with ShellCheck enabled locally. A later fresh Jazzy build
+received HTTP 403 from the unauthenticated ROS GitHub release API. Docker builds
+now pin the official repository-bootstrap release to 1.3.0. Installer regressions
+cover bypassing an unavailable API, clear lookup failures, invalid pins and the
+unchanged unpinned lookup path. This fixes the observed build dependency rather
+than bypassing the container test gate.
+
 ## Cloud setup documentation — 2026-11-17
 
 The README now places both editions' start/stop/restart commands first and gives

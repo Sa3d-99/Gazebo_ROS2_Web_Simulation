@@ -6,6 +6,7 @@ LABEL org.opencontainers.image.title="Gazebo ROS 2 Web Simulation" \
       org.opencontainers.image.licenses="MIT"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG ROS_APT_SOURCE_VERSION=1.3.0
 ENV LANG=C.UTF-8 \
     DISPLAY_NUM=:1 \
     WEB_PORT=8080 \
@@ -17,7 +18,7 @@ ENV LANG=C.UTF-8 \
 WORKDIR /opt/gazebo-web
 # Keep dependency installation cached when only the launcher changes.
 COPY install.sh install-utils.sh gazebo.sh requirements.txt ./
-RUN export DEBIAN_FRONTEND=noninteractive \
+RUN export DEBIAN_FRONTEND=noninteractive ROS_APT_SOURCE_VERSION="${ROS_APT_SOURCE_VERSION}" \
     && apt-get update \
     && apt-get install -y --no-install-recommends tini curl procps \
     && bash install.sh \

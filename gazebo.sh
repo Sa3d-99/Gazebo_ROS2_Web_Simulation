@@ -52,11 +52,21 @@ gazebo_install() {
     # have a working repository; leave that configuration in place when usable.
     install_apt update
     if ! apt-cache show "ros-${ROS_DISTRO}-ros-gz" >/dev/null 2>&1; then
-        local source_version tmp_dir
-        gazebo_log "Looking up the ROS apt repository release..."
-        source_version="$(curl -fL --progress-bar --retry 3 --connect-timeout 30 \
-            https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest \
-            | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+        local source_version="${ROS_APT_SOURCE_VERSION:-}" tmp_dir release_json
+        if [[ -z "$source_version" ]]; then
+            gazebo_log "Looking up the ROS apt repository release..."
+            if ! release_json="$(curl -fL --progress-bar --retry 3 --connect-timeout 30 \
+                https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest)"; then
+                gazebo_error "Could not query ros2-apt-source. Set ROS_APT_SOURCE_VERSION to a release version and retry."
+                return 1
+            fi
+            if ! source_version="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])' <<< "$release_json")"; then
+                gazebo_error "Could not read the ros2-apt-source release response."
+                return 1
+            fi
+        else
+            gazebo_log "Using pinned ROS apt repository release ${source_version}."
+        fi
         [[ "$source_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
             || { gazebo_error "Could not determine ros2-apt-source release."; return 1; }
         tmp_dir="$(mktemp -d)"

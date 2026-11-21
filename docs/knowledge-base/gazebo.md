@@ -13,6 +13,13 @@ An unset `ROS_DISTRO` is filled from Ubuntu. A conflicting distro or another OS/
 
 Installation uses `ros-<distro>-ros-base`, `ros-<distro>-ros-gz`, and Mesa/GL, Qt/XCB, and D-Bus dependencies. Installed packages and a usable existing ROS apt source are reused. Otherwise the maintained `ros2-apt-source` package configures the ROS repository. No Gazebo Classic or separate OSRF repository is added.
 
+Docker builds set `ROS_APT_SOURCE_VERSION=1.3.0` through a build argument, so the
+repository bootstrap downloads that release directly. This removes the shared
+runner's unauthenticated GitHub `releases/latest` dependency, which returned HTTP
+403 during CI validation. Direct installation still discovers the latest release
+unless the same environment variable is supplied. This pins only the repository
+bootstrap; ROS/Gazebo packages still come from apt.
+
 `install-utils.sh` serializes project installers with `flock`, gives each installation its own temporary apt archive/partial directory, retains apt/dpkg locks, and enables visible output, three download retries, and a 300-second package-lock timeout. Its exit trap cleans up the temporary archive directory. Installation output also goes to `LOG_DIR/install.log`. Before reporting completion, `gazebo_verify_installation` checks ROS setup, the `ros2` command, `ros_gz_sim`, and `ros_gz_bridge`. See the [investigation note](installer-progress.md) for the observed failure and limits of the fix.
 
 Launch sources `/opt/ros/<distro>/setup.bash`, selects Qt XCB, and runs `ros2 launch ros_gz_sim gz_sim.launch.py` on the shared display. `GAZEBO_ARGS` defaults to `-r shapes.sdf` and can select another world. The recorded process group and ROS launch shutdown option keep server and GUI lifecycle together.

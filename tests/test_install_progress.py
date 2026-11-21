@@ -12,6 +12,71 @@ from test_entrypoints import ROOT, executable
 
 
 class InstallProgressTests(unittest.TestCase):
+    def run_repository_setup(self, pin=None, api_fails=True):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            (directory / "bin").mkdir()
+            for command in ["dpkg", "add-apt-repository"]:
+                executable(directory / "bin" / command, "#!/bin/sh\nexit 0\n")
+            executable(directory / "bin/apt-cache", "#!/bin/sh\nexit 1\n")
+            executable(directory / "bin/curl", '''
+                #!/usr/bin/env python3
+                import os, pathlib, sys
+                args = sys.argv[1:]
+                with open(os.environ['CURL_CALLS'], 'a') as calls:
+                    calls.write(args[-1] + '\\n')
+                if 'api.github.com' in args[-1]:
+                    if os.environ['API_FAILS'] == '1':
+                        print('simulated GitHub HTTP 403', file=sys.stderr)
+                        sys.exit(22)
+                    print('{"tag_name":"1.3.0"}')
+                elif '-o' in args:
+                    pathlib.Path(args[args.index('-o') + 1]).write_text('fake deb')
+            ''')
+            env = {**os.environ, "PATH": f"{directory / 'bin'}:{os.environ['PATH']}",
+                   "TMPDIR": temp, "CURL_CALLS": str(directory / "curl-calls"),
+                   "API_FAILS": str(int(api_fails)), "SUDO": ""}
+            env.pop("ROS_APT_SOURCE_VERSION", None)
+            if pin is not None:
+                env["ROS_APT_SOURCE_VERSION"] = pin
+            result = subprocess.run(
+                ["bash", "-euc", '''
+                    source "$1"
+                    gazebo_select_platform() { export ROS_DISTRO=jazzy; GAZEBO_RELEASE=Harmonic; GAZEBO_CODENAME=noble; }
+                    gazebo_package_installed() { return 1; }
+                    install_apt() { :; }
+                    gazebo_install
+                ''', "test", str(ROOT / "gazebo.sh")], env=env,
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+            calls = directory / "curl-calls"
+            return result, calls.read_text() if calls.exists() else ""
+
+    def test_pinned_repository_release_avoids_rate_limited_github_api(self):
+        result, calls = self.run_repository_setup(pin="1.3.0")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("api.github.com", calls)
+        self.assertIn("releases/download/1.3.0/ros2-apt-source_1.3.0.noble_all.deb", calls)
+
+    def test_repository_lookup_failure_reports_the_pin_option(self):
+        result, calls = self.run_repository_setup()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ROS_APT_SOURCE_VERSION", result.stderr)
+        self.assertNotIn("JSONDecodeError", result.stderr)
+        self.assertNotIn("releases/download", calls)
+
+    def test_unpinned_install_still_uses_the_available_latest_release(self):
+        result, calls = self.run_repository_setup(api_fails=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("api.github.com", calls)
+        self.assertIn("releases/download/1.3.0/", calls)
+
+    def test_invalid_repository_pin_is_rejected_before_download(self):
+        result, calls = self.run_repository_setup(pin="not-a-version")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Could not determine", result.stderr)
+        self.assertEqual(calls, "")
+
     def test_full_installer_saves_failure_output_and_never_reports_complete(self):
         with tempfile.TemporaryDirectory() as temp:
             directory = Path(temp)

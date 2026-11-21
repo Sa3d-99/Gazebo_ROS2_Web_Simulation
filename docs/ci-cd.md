@@ -38,6 +38,13 @@ skip image builds/publication. Unknown source paths and workflow changes trigger
 the full image pipeline. Tags and manual runs always test both editions. If the
 base revision cannot be compared, the pipeline conservatively builds both.
 
+Docker builds pin `ros2-apt-source` to release `1.3.0` through the
+`ROS_APT_SOURCE_VERSION` build argument. This avoids unauthenticated GitHub
+`releases/latest` requests from shared runners. Update that build argument when
+adopting a newer repository-bootstrap release; ROS/Gazebo apt packages are still
+installed from their configured repositories. Direct non-Docker installation
+keeps automatic release lookup unless that environment variable is set.
+
 ## Enable Docker Hub publication once
 
 GHCR works with GitHub's built-in `GITHUB_TOKEN`; no additional secret is needed.
